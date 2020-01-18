@@ -37,7 +37,6 @@ parameters {
 }
 
 transformed parameters {
-  cholesky_factor_cov[nt] L_H[T];
   cov_matrix[nt] H[T];
   corr_matrix[nt] R[T];
   vector[nt] rr[T-1];
@@ -55,8 +54,7 @@ transformed parameters {
   u[1,] = u1_init;
   D[1,] = D1_init;
   Qr[1,] = Qr1_init;
-  L_H[1,] = cholesky_decompose(Qr[1,]);
-  H[1] = L_H[1]*L_H[1]';
+  H[1] = Qr[1,];
   R[1] = diag_matrix(rep_vector(1.0, nt));
   Qr_sdi[1] = rep_vector(1.0, nt);
 
@@ -94,7 +92,6 @@ transformed parameters {
     //    R[t,] = quad_form_diag(Qr[t,], inv(sqrt(diagonal(Qr[t,]))) ); // Qr_sdi[t,] * Qr[t,] * Qr_sdi[t,];
     R[t,] = quad_form_diag(Qr[t,], Qr_sdi[t,]); // Qr_sdi[t,] * Qr[t,] * Qr_sdi[t,];
     H[t,] = quad_form_diag(R[t,],     D[t,]);  // H = DRD; 
-    L_H[t,] = cholesky_decompose(H[t,]);
   }
 }
 model {
@@ -117,11 +114,11 @@ model {
   // likelihood
   if ( distribution == 0 ) {
     for(t in 1:T){
-      rts[t,] ~ multi_normal_cholesky(mu[t,], L_H[t,]);
+      rts[t,] ~ multi_normal(mu[t,], H[t,]);
     }
   } else if ( distribution == 1 ) {
     for(t in 1:T){
-      rts[t,] ~ multi_student_t(nu, mu[t,], L_H[t,]*L_H[t,]');
+      rts[t,] ~ multi_student_t(nu, mu[t,], H[t,]);
     }
   }
 }
