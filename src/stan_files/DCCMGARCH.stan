@@ -100,7 +100,7 @@ transformed parameters {
 model {
   // priors
   to_vector(beta) ~ normal(0, 1);
-  to_vector(c_h) ~ normal(-2, 4);
+  to_vector(c_h) ~ normal(0, 1);
   // Prior for initial state
   Qr1_init ~ wishart(nt + 1.0, diag_matrix(rep_vector(1.0, nt)) );
   to_vector(D1_init) ~ lognormal(0, 1);
