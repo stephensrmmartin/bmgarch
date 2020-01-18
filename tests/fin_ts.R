@@ -145,14 +145,14 @@ theta <- matrix(0, ncol = nt, nrow = nt)
 diag(phi) <- rep(.8, nt)
 diag(theta) <- rep(.5, nt)
 
-y <- sim.bekk(N, C, A, B, phi, theta)
+y <- sim.bekk(N, C, A, B, phi = NULL, theta = NULL)
 
 fit <- bmgarch(y,
                 iterations = 1000,
                 P = 1, Q = 1,
-                meanstructure = "arma",
+                meanstructure = "constant",
                 standardize_data = FALSE,
-                parameterization = "BEKK",
+                parameterization = "DCC",
                 distribution = "Gaussian",
                 xH = NULL,
                 adapt_delta = .95)
