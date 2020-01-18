@@ -106,8 +106,7 @@ model {
   to_vector(D1_init) ~ lognormal(0, 1);
   to_vector(u1_init) ~ normal(0, 1);
   // Prior on nu for student_t
-  if ( distribution == 1 )
-    nu ~ normal( nt, 50 );
+  nu ~ normal( nt, 50 );
   to_vector(theta) ~ normal(0, 1);
   to_vector(phi) ~ normal(0, 1);
   to_vector(phi0) ~ normal(0, 1);
