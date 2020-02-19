@@ -57,6 +57,19 @@ fit <- bmgarch(r2,
 system("notify-send 'Done sampling' " )
 summary(fit )
 
+r2.reordered <- r2[,c(2,1,3)]
+fit.reordered <- bmgarch(r2.reordered,
+               iterations = 800,
+               P = 1, Q = 1,
+               meanstructure = "arma",
+               standardize_data = TRUE,
+               parameterization = 'BEKK',
+               xH = NULL,
+               adapt_delta=0.80)
+system("notify-send 'Done sampling' " )
+summary(fit.reordered)
+
+
 fit.constant <- bmgarch(rlag[,1:2],
                         iterations = 800,
                         P = 1, Q = 1,
@@ -123,19 +136,21 @@ sim.bekk <- function(N,C,A,B, phi = NULL, theta = NULL) {
 
 set.seed(13)
 # nt = 2
-N <-  100
+N <-  200
 C <-  matrix( c(2,  0.5,  0.5,  2 ) ,  ncol = 2)
 A <-  matrix( c(.4,  0.1,  -0.3,  .2 ) ,  ncol = 2)
 B <-  matrix( c(.2,  0.1,  0.3,  .3 ) ,  ncol = 2)
 
 # nt = 3
-set.seed(13)
+set.seed(14)
 N <- 100
 nt <- 3
-C_sd <- diag(rep(2, 3))
+C_sd <- diag(rep(1, 3))
 C <- C_sd %*% rethinking::rlkjcorr(1,3, 5) %*% C_sd
 A <- matrix(runif(nt^2, -.5, .5), ncol=nt)
 B <- matrix(runif(nt^2, -.5, .5), ncol=nt)
+diag(A) <- runif(nt, 0, .8)
+diag(B) <- runif(nt, 0, .8)
 
 # ARMA(1,1)
 phi <- matrix(runif(nt^2, -.5, .5), ncol = nt)
@@ -145,7 +160,8 @@ theta <- matrix(0, ncol = nt, nrow = nt)
 diag(phi) <- rep(.8, nt)
 diag(theta) <- rep(.5, nt)
 
-y <- sim.bekk(N, C, A, B, phi, theta)
+y <- sim.bekk(N, C, A, B, phi = NULL, theta = NULL)
+colnames(y) <- LETTERS[1:ncol(y)]
 
 fit <- bmgarch(y,
                 iterations = 1000,
@@ -158,6 +174,30 @@ fit <- bmgarch(y,
                 adapt_delta = .95)
 system("notify-send 'Done sampling' " )
 summary(fit)
+
+fit.reordered <- bmgarch(y[,c(2,1,3)],
+                iterations = 1000,
+                P = 1, Q = 1,
+                meanstructure = "arma",
+                standardize_data = FALSE,
+                parameterization = "BEKK",
+                distribution = "Gaussian",
+                xH = NULL,
+                adapt_delta = .95)
+system("notify-send 'Done sampling' " )
+summary(fit.reordered)
+
+fit.reordered.pb <- bmgarch(y[,c(2,1,3)],
+                iterations = 1000,
+                P = 1, Q = 1,
+                meanstructure = "arma",
+                standardize_data = FALSE,
+                parameterization = "pdBEKK",
+                distribution = "Gaussian",
+                xH = NULL,
+                adapt_delta = .95)
+system("notify-send 'Done sampling' " )
+summary(fit.reordered.pb)
 
 mcmc_trace(as.array(fit$model_fit, pars = c("A","B","Cnst")))
 mcmc_dens_overlay(as.array(fit$model_fit, pars = c("A","B","Cnst")))
