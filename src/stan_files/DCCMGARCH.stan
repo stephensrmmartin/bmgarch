@@ -8,7 +8,16 @@ data {
 }
 
 transformed data {
+  // Obtain mean and sd over TS for prior in arma process phi0                                                                                                                                                 
+  vector[nt] rts_m;
+  vector[nt] rts_sd;
+ 
 #include /transformed_data/xh_marker.stan
+ 
+  for ( i in 1:nt ){
+    rts_m[i] = mean(rts[,i]);
+    rts_sd[i] = sd(rts[,i]);
+  }
 }
 
 parameters {
@@ -19,8 +28,8 @@ parameters {
 
   // GARCH h parameters on variance metric
   vector[nt] c_h; // variance on log metric 
-  vector< upper = 1 >[nt] a_h[Q];
-  vector< upper = 1 >[nt] b_h[P]; // TODO actually: 1 - a_h, across all Q and P...
+  vector<lower = 0,  upper = 1 >[nt] a_h[Q];
+  vector<lower = 0,  upper = 1 >[nt] b_h[P]; // TODO actually: 1 - a_h, across all Q and P...
   // GARCH q parameters 
   real<lower=0, upper = 1 > a_q; // 
   real<lower=0, upper = (1 - a_q) > b_q; //
@@ -77,10 +86,10 @@ transformed parameters {
 	ar_d[d] = ar_d[d] + b_h[p, d]*D[t-p, d]^2;
       }
 
-      // Predictor on diag (given in xH)
-      if ( xH_marker >= 1) {
-	vd[d] = exp( c_h[d] + beta[d] * xH[t, d] ) + ma_d[d] + ar_d[d];
-      } else if ( xH_marker == 0) {
+      // Predictor on diag (given in xC)
+      if ( xC_marker >= 1) {
+	vd[d] = exp( c_h[d] + beta[d] * xC[t, d] ) + ma_d[d] + ar_d[d];
+      } else if ( xC_marker == 0) {
       	vd[d] = exp( c_h[d] )  + ma_d[d] + ar_d[d];
       }
 
@@ -107,7 +116,7 @@ model {
   nu ~ normal( nt, 50 );
   to_vector(theta) ~ std_normal();
   to_vector(phi) ~ std_normal();
-  to_vector(phi0) ~ std_normal();
+  phi0 ~ multi_normal(rts_m, diag_matrix( rts_sd ) );
   //  to_vector(a_h) ~ normal(0, .5);
   //to_vector(b_h) ~ normal(0, .5);
   S ~ lkj_corr( 1 );

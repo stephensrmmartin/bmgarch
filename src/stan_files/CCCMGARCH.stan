@@ -6,7 +6,16 @@ data {
 #include /data/data.stan
 }
 transformed data {
-#include /transformed_data/xh_marker.stan  
+  // Obtain mean and sd over TS for prior in arma process phi0                                                                                                                                                 
+  vector[nt] rts_m;
+  vector[nt] rts_sd;
+
+#include /transformed_data/xh_marker.stan
+   
+  for ( i in 1:nt ){
+    rts_m[i] = mean(rts[,i]);
+    rts_sd[i] = sd(rts[,i]);
+  }
 }
 parameters {
  // ARMA parameters 
@@ -62,9 +71,9 @@ transformed parameters {
       for (p in 1:min( t-1, P) ) {
 	ar_d[d] = ar_d[d] + b_h[p, d]*D[t-p, d]^2;
       }
-      if ( xH_marker >= 1) {
-	vd[d] = exp( c_h[d] + beta[d] * xH[t, d] ) + ma_d[d] + ar_d[d];
-      } else if ( xH_marker == 0) {
+      if ( xC_marker >= 1) {
+	vd[d] = exp( c_h[d] + beta[d] * xC[t, d] ) + ma_d[d] + ar_d[d];
+      } else if ( xC_marker == 0) {
       	vd[d] = exp( c_h[d] )  + ma_d[d] + ar_d[d];
       }
       D[t, d] = sqrt( vd[d] );
@@ -82,7 +91,7 @@ model {
   to_vector(D1_init) ~ lognormal(0, 1);
   to_vector(theta) ~ normal(0, 1);
   to_vector(phi) ~ normal(0, 1);
-  to_vector(phi0) ~ normal(0, 1);
+  phi0 ~ multi_normal(rts_m, diag_matrix( rts_sd ) );
   R ~ lkj_corr( 1 );
   // likelihood
   if ( distribution == 0 ) {
