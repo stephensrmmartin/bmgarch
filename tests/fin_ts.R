@@ -46,12 +46,12 @@ colnames(rlag ) <- colnames(r2 )
 sr2 <- scale(r2 )
 sr2
 
-fit <- bmgarch(r2,
+fit <- bmgarch::bmgarch(r2,
                iterations = 800,
                P = 1, Q = 1,
                meanstructure = "arma",
                standardize_data = TRUE,
-               parameterization = 'BEKK',
+               parameterization = 'clDCC',
                xH = NULL,
                adapt_delta=0.80)
 system("notify-send 'Done sampling' " )
