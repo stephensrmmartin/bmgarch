@@ -123,7 +123,7 @@ if( parameterization == 'clDCC' ) model_fit <- rstan::sampling(stanmodels$clDCC,
                                                       verbose = TRUE,
                                                       iter = iterations,
                                                       control = list(adapt_delta = .99),
-                                                      init_r = 1,
+                                                      init_r = .1,
                                                       chains = chains) else { 
   warning( 'Not a valid model specification. Select CCC, DCC, BEKK, or pdBEKK.' )}
                                                                        }

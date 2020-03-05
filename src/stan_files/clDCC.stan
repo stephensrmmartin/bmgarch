@@ -30,8 +30,10 @@ parameters {
   vector[nt] c_h; // variance on log metric 
   // vector<lower = 0,  upper = 1 >[nt] a_h[Q];
   // vector<lower = 0,  upper = 1 >[nt] b_h[P]; // TODO actually: 1 - a_h, across all Q and P...
-  matrix<lower = 0, upper = 1>[nt, nt] a_h[Q];
-  matrix<lower = 0, upper = .9>[nt, nt] b_h[P];
+  vector[nt] a_h[Q];
+  vector[nt] b_h[P]; // TODO actually: 1 - a_h, across all Q and P...
+  // matrix[nt, nt] a_h[Q];
+  // matrix[nt, nt] b_h[P];
   // GARCH q parameters 
   real<lower=0, upper = 1 > a_q; // 
   real<lower=0, upper = (1 - a_q) > b_q; //
@@ -60,8 +62,8 @@ transformed parameters {
   // real<lower = 0> ma_d[nt];
   // real<lower = 0> ar_d[nt];  
   row_vector<lower = 0>[nt] vd = rep_row_vector(0, nt);
-  row_vector<lower = 0>[nt] ma_d = rep_row_vector(0, nt);
-  row_vector<lower = 0>[nt] ar_d = rep_row_vector(0, nt);
+  row_vector[nt] ma_d = rep_row_vector(0, nt);
+  row_vector[nt] ar_d = rep_row_vector(0, nt);
 
   // Initialize t=1
   mu[1,] = phi0;
@@ -71,6 +73,8 @@ transformed parameters {
   H[1] = Qr[1,];
   R[1] = diag_matrix(rep_vector(1.0, nt));
   Qr_sdi[1] = rep_vector(1.0, nt);
+  // print("a_h: ", a_h)
+  // print("b_h: ", b_h)
 
   // iterations geq 2
   for (t in 2:T){
@@ -82,25 +86,26 @@ transformed parameters {
 
 
     for (q in 1:min(t - 1, Q)) {
-      rr[t-q] = square(rts[t - q] - mu[t - q])';
+      rr[t - q] = log(square(u[t - q]))';
+      // rr[t-q] = square(rts[t - q] - mu[t - q])';
       // rr[t-q] = ((rts[t - q] - mu[t - q]) .* (rts[t - q] - mu[t - q]))';
-      ma_d += rr[t - q] * a_h[q];
+      ma_d += rr[t - q] * diag_matrix(a_h[q]);
     }
     // print("ma_d:",ma_d);
 
     for (p in 1:min(t - 1, P)) {
-      ar_d += square(D[t - p])' * b_h[p];
+      ar_d += log(square(D[t - p]))' * diag_matrix(b_h[p]);
       // ar_d += (D[t - p] .* D[t - p])' * b_h[p];
     }
     // print("ARd:",ar_d);
 
     if ( xC_marker >= 1 ) {
       for(d in 1:nt) {
-	vd[d] = exp(c_h[d] + beta[d] * xC[t, d] ) + ma_d[d] + ar_d[d];
+	vd[d] = exp(c_h[d] + beta[d] * xC[t, d]  + ma_d[d] + ar_d[d]);
       }
     } else if ( xC_marker == 0) {
       for(d in 1:nt) {
-	vd[d] = exp(c_h[d]')  + ma_d[d] + ar_d[d];
+	vd[d] = exp(c_h[d]'  + ma_d[d] + ar_d[d]);
       }
     }
     // print("VD:", vd);
