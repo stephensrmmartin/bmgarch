@@ -163,12 +163,12 @@ diag(theta) <- rep(.5, nt)
 y <- sim.bekk(N, C, A, B, phi = NULL, theta = NULL)
 colnames(y) <- LETTERS[1:ncol(y)]
 
-fit <- bmgarch(y,
-                iterations = 1000,
+fit <- bmgarch(y[,1:3, drop = FALSE],
+                iterations = 800,
                 P = 1, Q = 1,
-                meanstructure = "arma",
-                standardize_data = FALSE,
-                parameterization = "BEKK",
+                meanstructure = "constant",
+                standardize_data = TRUE,
+                parameterization = "clDCC",
                 distribution = "Gaussian",
                 xH = NULL,
                 adapt_delta = .95)
