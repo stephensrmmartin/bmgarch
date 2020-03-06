@@ -32,8 +32,8 @@ parameters {
   // vector<lower = 0,  upper = 1 >[nt] b_h[P]; // TODO actually: 1 - a_h, across all Q and P...
   // vector[nt] a_h[Q];
   // vector[nt] b_h[P]; // TODO actually: 1 - a_h, across all Q and P...
-  matrix<lower = 0, upper = 1>[nt, nt] a_h[Q];
-  matrix<lower = 0, upper = .3>[nt, nt] b_h[P];
+  matrix[nt, nt] a_h_raw[Q];
+  matrix[nt, nt] b_h_raw[P];
   // GARCH q parameters 
   real<lower=0, upper = 1 > a_q; // 
   real<lower=0, upper = (1 - a_q) > b_q; //
@@ -50,6 +50,8 @@ parameters {
 }
 
 transformed parameters {
+  matrix[nt, nt] a_h[Q] = a_h_raw;
+  matrix[nt, nt] b_h[P] = b_h_raw;
   cov_matrix[nt] H[T];
   corr_matrix[nt] R[T];
   row_vector[nt] rr[T-1];
@@ -62,8 +64,26 @@ transformed parameters {
   // real<lower = 0> ma_d[nt];
   // real<lower = 0> ar_d[nt];  
   row_vector<lower = 0>[nt] vd = rep_row_vector(0, nt);
-  row_vector[nt] ma_d = rep_row_vector(0, nt);
-  row_vector[nt] ar_d = rep_row_vector(0, nt);
+  row_vector<lower = 0>[nt] ma_d = rep_row_vector(0, nt);
+  row_vector<lower = 0>[nt] ar_d = rep_row_vector(0, nt);
+
+  /*
+    Maybe try R = max(Q, P), and say b_h must be < 1 - a_h?, for each 1:R?
+    Maybe try having the AR part (squared residual part; a_h) be cross-lagged, but not b_h.
+    Maybe try just adding an 'error' to each at time t? Like, log(sigma[t]) = AR + MA + z[t] ?
+    How would you do this, in an LSM framework? What does AR-LSM look like?
+   */
+  // Diagonal <0,1> constraint
+  for(q in 1:Q) {
+    for(d in 1:nt) {
+      a_h[q, d, d] = inv_logit(a_h[q, d, d]);
+    }
+  }
+  for(p in 1:P) {
+    for(d in 1:nt) {
+      b_h[p, d, d] = inv_logit(b_h[p, d, d])*(.3);
+    }
+  }
 
   // Initialize t=1
   mu[1,] = phi0;
@@ -162,6 +182,18 @@ model {
   //  to_vector(a_h) ~ normal(0, .5);
   //to_vector(b_h) ~ normal(0, .5);
   S ~ lkj_corr( 1 );
+  // Diagonal <0,1> constraint Jacobian
+  for(q in 1:Q) {
+    for(d in 1:nt) {
+      target += log(a_h[q, d, d]) + log1m(a_h[q, d, d]);
+    }
+  }
+  for(p in 1:P) {
+    for(d in 1:nt) {
+      target += log(b_h[p, d, d]) + log1m(b_h[p, d, d]) + log(.3);
+    }
+  }
+
 
   // likelihood
   if ( distribution == 0 ) {
